@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Manual InviteShark",
+  "version": "1.0",
+  "description": "A simple Chrome extension.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "webRequest",
+    "webNavigation",
+    "tabs" 
+  ],
+  "host_permissions": [
+    "*://*/*" 
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"], 
+      "js": ["content.js"] 
+    }
+  ]
+}
