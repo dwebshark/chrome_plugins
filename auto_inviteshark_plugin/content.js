@@ -1,17 +1,29 @@
 var data = "";
 var next_person_url = "";
 
+/* -----------------------------
+   VARIABLE WAIT FUNCTION
+------------------------------*/
+function variableWait(min, extra = 600) {
+    // extra = maximale random extra wachttijd
+    const randomExtra = Math.floor(Math.random() * extra);
+    return new Promise(resolve => setTimeout(resolve, min + randomExtra));
+}
+
+/* -----------------------------
+   DATA FUNCTIONS
+------------------------------*/
+
 function Reload_The_Data() {
     var url_to_be_sent = "http://sourcingselector.nl/fetchData/";
     chrome.runtime.sendMessage({ action: 'fetchData', url_to_be_sent: url_to_be_sent }, response => {
         if (response && response.success) {
-            Recieve_The_Data(() => {
+            Recieve_The_Data(async () => {
                 if (data && data.openbare_url) {
-                    setTimeout(() => {
-                        console.log("Data ready for redirection");
-                        console.log(data);
-                        window.location = data.openbare_url;
-                    }, 500);
+                    await variableWait(500); // min 500 ms
+                    console.log("Data ready for redirection");
+                    console.log(data);
+                    window.location = data.openbare_url;
                 }
             });
         } else {
@@ -19,22 +31,20 @@ function Reload_The_Data() {
         }
     });
 }
-// Function to print the data to the console
+
 function printData() {
     Recieve_The_Data((data) => {
         console.log('Fetched Data:', data);
     });
 }
 
-// Event listener for window load
 window.addEventListener('load', printData);
+
 function Recieve_The_Data(callback) {
     chrome.runtime.sendMessage({ action: 'getStoredData' }, response => {
         if (response && response.success) {
             data = response.data;
-            if (callback) {
-                callback();
-            }
+            if (callback) callback();
         } else {
             const errorMessage = response && response.message ? response.message : 'Unknown error occurred';
             console.error('Failed to fetch stored data from background.js: ', errorMessage);
@@ -44,11 +54,13 @@ function Recieve_The_Data(callback) {
 
 function Delete_The_First_Person(callback) {
     chrome.runtime.sendMessage({ action: 'Delete_The_First_Person' }, response => {
-        if (callback) {
-            callback(response);
-        }
+        if (callback) callback(response);
     });
 }
+
+/* -----------------------------
+   BUTTON CREATION
+------------------------------*/
 
 function Create_Reload_Button() {
     var button = document.createElement("button");
@@ -57,12 +69,12 @@ function Create_Reload_Button() {
     button.textContent = 'Start';
     button.style.backgroundColor = '#008000';
     button.style.flex = '1';
+
     button.addEventListener("click", function () {
         Reload_The_Data();
     });
 
-    var existingDiv = document.getElementById("invite-button-nav");
-    existingDiv.appendChild(button);
+    document.getElementById("invite-button-nav").appendChild(button);
 }
 
 function Create_Next_Button() {
@@ -74,19 +86,19 @@ function Create_Next_Button() {
     button.style.flex = '1';
 
     button.addEventListener("click", function () {
-        Delete_The_First_Person(() => {
-            chrome.runtime.sendMessage({ action: 'getNextPersonUrl' }, response => {
+        Delete_The_First_Person(async () => {
+            chrome.runtime.sendMessage({ action: 'getNextPersonUrl' }, async response => {
                 if (response && response.success) {
                     const next_person_url = response.data;
                     console.log("New URL: ", next_person_url);
 
-                    setTimeout(() => {
-                        if (next_person_url === "No_Url") {
-                            window.alert("Je hebt alle personen uitgenodigd topper!");
-                        } else {
-                            window.location = next_person_url;
-                        }
-                    }, 500);
+                    await variableWait(500); // min 500 ms
+
+                    if (next_person_url === "No_Url") {
+                        window.alert("Je hebt alle personen uitgenodigd topper!");
+                    } else {
+                        window.location = next_person_url;
+                    }
                 } else {
                     console.error('Failed to fetch next person URL:', response.error);
                 }
@@ -94,8 +106,7 @@ function Create_Next_Button() {
         });
     });
 
-    var existingDiv = document.getElementById("invite-button-nav");
-    existingDiv.appendChild(button);
+    document.getElementById("invite-button-nav").appendChild(button);
 }
 
 function Create_Skip_Button() {
@@ -110,122 +121,110 @@ function Create_Skip_Button() {
         showChoicePopup();
     });
 
-    var existingDiv = document.getElementById("invite-button-nav");
-    existingDiv.appendChild(button);
+    document.getElementById("invite-button-nav").appendChild(button);
 }
 
+/* -----------------------------
+   KEYBOARD SHORTCUTS
+------------------------------*/
+
 function Add_Eventlistener_To_Keys() {
-    // Add an event listener to the document to listen for keydown events
     document.addEventListener("keydown", function (event) {
-        // Check if the '1' key was pressed (key code 49 for '1' on the main keyboard)
+
         if (event.key === '3') {
-            // Get the button with the class name 'invite-button'
             var button = document.querySelector("#next-button");
-
-            // Check if the button exists
-            if (button) {
-                // Trigger a click event on the button
-                button.click();
-            }
+            if (button) button.click();
         }
+
         if (event.key === '1') {
-            // Get the button with the class name 'invite-button'
             var button = document.querySelector("#reload-button");
-
-            // Check if the button exists
-            if (button) {
-                // Trigger a click event on the button
-                button.click();
-            }
+            if (button) button.click();
         }
+
         if (event.ctrlKey) {
-            // Function to check if the 'invite' button is gone
-            function checkButtonGone() {
+
+            async function checkButtonGone() {
                 var inviteButton = document.querySelector("button[aria-label='Uitnodiging verzenden']");
-                inviteButton.click();
-                setTimeout(function () {
-                    console.log("wacht 17 sec..");
-                    var inviteButton = document.querySelector("button[aria-label='Uitnodiging verzenden']");
-                    console.log(inviteButton);
-                    if (!inviteButton) {
-                        // Button is gone, click the next button
-                        var nextButton = document.querySelector("#next-button");
-                        if (nextButton) {
-                            nextButton.click();
-                            console.log("Next button clicked!");
-                        }
-                    }
-                }, 1700);
+                if (inviteButton) inviteButton.click();
+
+                await variableWait(1700); // min 1700 ms
+
+                inviteButton = document.querySelector("button[aria-label='Uitnodiging verzenden']");
+                if (!inviteButton) {
+                    var nextButton = document.querySelector("#next-button");
+                    if (nextButton) nextButton.click();
+                }
             }
 
-            // Start checking if the button is gone
             checkButtonGone();
         }
     });
 }
 
-function showChoicePopup() {
-    const choice = prompt("Please choose one of the following options:\n1. Ian\n2. Shanna\n3. Benthe\n4. Jessica\n5. Francys\n6. Ena", "Naam");
+/* -----------------------------
+   ACCOUNT CHOICE POPUP
+------------------------------*/
 
-    if (choice) {
-        let selectedChoice;
-        switch (choice) {
-            case 'Ian':
-                selectedChoice = "ian_hoefnagels";
-                break;
-            case 'Shanna':
-                selectedChoice = "shanna_van_herk";
-                break;
-            case 'Benthe':
-                selectedChoice = "benthe_de_jong";
-                break;
-            case 'Jessica':
-                selectedChoice = "jessica_visser";
-                break;
-            case 'Francys':
-                selectedChoice = "francys_gaviria_aldas";
-                break;
-            case 'Ena':
-                selectedChoice = "ena_rizvanovic";
-                break;
-            default:
-                alert("Kies een van de namen");
-                return;
-        }
-        handleChoice(selectedChoice);
+function showChoicePopup() {
+    const choice = prompt(
+        "Please choose one of the following options:\n1. Ian\n2. Shanna\n3. Benthe\n4. Jessica\n5. Francys\n6. Ena",
+        "Naam"
+    );
+
+    if (!choice) return;
+
+    let selectedChoice;
+    switch (choice) {
+        case 'Ian':
+            selectedChoice = "ian_hoefnagels"; break;
+        case 'Shanna':
+            selectedChoice = "shanna_van_herk"; break;
+        case 'Benthe':
+            selectedChoice = "benthe_de_jong"; break;
+        case 'Jessica':
+            selectedChoice = "jessica_visser"; break;
+        case 'Francys':
+            selectedChoice = "francys_gaviria_aldas"; break;
+        case 'Ena':
+            selectedChoice = "ena_rizvanovic"; break;
+        default:
+            alert("Kies een van de namen");
+            return;
     }
+
+    handleChoice(selectedChoice);
 }
 
 function handleChoice(choice) {
     chrome.runtime.sendMessage({ action: 'sendChoice', choice: choice }, response => {
         if (response && response.success) {
-            console.log("Choice sent successfully: ", choice);
-            chrome.runtime.sendMessage({ action: 'getNextPersonUrl' }, response => {
+            chrome.runtime.sendMessage({ action: 'getNextPersonUrl' }, async response => {
                 if (response && response.success) {
                     const next_person_url = response.data;
-                    console.log("New URL: ", next_person_url);
 
-                    setTimeout(() => {
-                        if (next_person_url == "No_Url") {
-                            window.location = "https://www.linkedin.com";
-                            window.alert("Je hebt alle personen uitgenodigd!");
-                        } else {
-                            window.location = next_person_url;
-                        }
-                    }, 500);
+                    await variableWait(500); // min 500 ms
+
+                    if (next_person_url == "No_Url") {
+                        window.location = "https://www.linkedin.com";
+                        window.alert("Je hebt alle personen uitgenodigd!");
+                    } else {
+                        window.location = next_person_url;
+                    }
                 } else {
                     console.error('Failed to fetch next person URL');
                 }
             });
         } else {
-            console.error('Failed to send choice to background.js: ', response.message);
+            console.error('Failed to send choice: ', response.message);
         }
     });
 }
 
-function Create_Navigation_Div() {
-    var existingDiv = document.querySelector('body');
+/* -----------------------------
+   NAVIGATION DIV & CSS
+------------------------------*/
 
+function Create_Navigation_Div() {
     var buttonsDiv = document.createElement('div');
     buttonsDiv.id = "invite-button-nav";
     buttonsDiv.style.display = 'flex';
@@ -237,14 +236,13 @@ function Create_Navigation_Div() {
     buttonsDiv.style.zIndex = '1000';
     buttonsDiv.style.backgroundColor = 'white';
     buttonsDiv.style.marginTop = '50px';
+
     document.body.insertBefore(buttonsDiv, document.body.firstChild);
 }
 
 function Add_CSS_Styles() {
     var css = `
-    button {
-        font-size: 25px;
-    }
+    button { font-size: 25px; }
     .invite-button {
         background-color: blue;
         color: white;
@@ -254,33 +252,23 @@ function Add_CSS_Styles() {
         cursor: pointer;
         transition: background-color 0.3s ease;
     }
-    
     .invite-button:hover {
         background-color: darkblue;
         animation: hoverAnimation 0.3s ease forwards;
     }
-    
     @keyframes hoverAnimation {
-        0% {
-            transform: scale(1);
-        }
-        100% {
-            transform: scale(1.05);
-        }
-    }    
-`;
-    var style = document.createElement('style');
-
-    style.type = 'text/css';
-
-    if (style.styleSheet) {
-        style.styleSheet.cssText = css;
-    } else {
-        style.appendChild(document.createTextNode(css));
+        0% { transform: scale(1); }
+        100% { transform: scale(1.05); }
     }
-
+    `;
+    var style = document.createElement('style');
+    style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
 }
+
+/* -----------------------------
+   PAGE LOAD
+------------------------------*/
 
 function onPageLoad() {
     if (window.location.href.includes("linkedin")) {
@@ -295,24 +283,25 @@ function onPageLoad() {
 
 window.addEventListener('load', onPageLoad);
 
+/* -----------------------------
+   AUTO-INVITE LOGIC
+------------------------------*/
+
 chrome.storage.local.get(['extensionEnabled'], function (result) {
-    if (result.extensionEnabled !== false) { // Default to true if not set
+    if (result.extensionEnabled !== false) {
+
         if (document.readyState === "complete" || document.readyState === "interactive") {
+
             if (window.location.href.includes("linkedin.com/in")) {
-                function Wait(ms) {
-                    return new Promise(resolve => setTimeout(resolve, ms));
-                }
 
                 function getRandomInt() {
-                    const min = Math.ceil(800);
-                    const max = Math.floor(1200);
-                    return Math.floor(Math.random() * (max - min + 1)) + min;
+                    return Math.floor(Math.random() * (1200 - 800 + 1)) + 800;
                 }
 
                 function waitForElement(selector, timeout = 5000) {
                     return new Promise((resolve, reject) => {
-                        const interval = getRandomInt(); // Interval in ms to check for the element
-                        let elapsed = 0; // Time elapsed
+                        const interval = getRandomInt();
+                        let elapsed = 0;
 
                         const timer = setInterval(() => {
                             if (document.querySelector(selector)) {
@@ -320,9 +309,9 @@ chrome.storage.local.get(['extensionEnabled'], function (result) {
                                 resolve(document.querySelector(selector));
                             } else {
                                 elapsed += interval;
-                                if (elapsed >= timeout) { // Timeout check
+                                if (elapsed >= timeout) {
                                     clearInterval(timer);
-                                    reject(new Error(`Element with selector "${selector}" not found within ${timeout} ms`));
+                                    reject(new Error(`Element not found: ${selector}`));
                                 }
                             }
                         }, interval);
@@ -330,13 +319,11 @@ chrome.storage.local.get(['extensionEnabled'], function (result) {
                 }
 
                 async function Make_Invitation_Ready() {
-                    await Wait(2500);
+                    await variableWait(2500); // min 2500 ms
 
-                    // Step 1: find the main section
                     var bericht_verstuur_vlak = document.getElementsByClassName("ph5")[0];
                     var invite_button = bericht_verstuur_vlak.querySelectorAll('[aria-label*="Connectieverzoek verzenden"]');
 
-                    // Step 2: click the connect button if available
                     if (invite_button.length > 0) {
                         invite_button[0].click();
                     } else {
@@ -344,44 +331,25 @@ chrome.storage.local.get(['extensionEnabled'], function (result) {
                         return;
                     }
 
-                    // Step 3: click "Add a note"
                     var addMessageButton = await waitForElement('[aria-label*="Opmerking toevoegen"]');
                     addMessageButton.click();
 
-                    // Step 4: write the message
                     var message_area = await waitForElement('textarea[name="message"]');
                     message_area.style.height = "300px";
-                    console.log(data);
                     message_area.value = data.connectietekst;
-                    var event = new Event('input', { bubbles: true });
-                    message_area.dispatchEvent(event);
+                    message_area.dispatchEvent(new Event('input', { bubbles: true }));
 
-                    // Step 5: click the "Send invitation" button
                     var inviteButton = await waitForElement("button[aria-label='Uitnodiging verzenden']");
                     inviteButton.click();
-                    console.log("Invitation sent, checking if button disappears...");
 
-                    // Step 6: check if button disappears, then move on
-                    setTimeout(function () {
-                        console.log("Waiting 1.7 sec...");
-                        var inviteButton = document.querySelector("button[aria-label='Uitnodiging verzenden']");
-                        console.log(inviteButton);
+                    await variableWait(1700); // min 1700 ms
 
-                        if (!inviteButton) {
-                            var nextButton = document.querySelector("#next-button");
-                            if (nextButton) {
-                                nextButton.click();
-                                console.log("Next button clicked!");
-                            } else {
-                                console.log("No next button found.");
-                            }
-                        } else {
-                            console.log("Invitation button still visible, might need more time.");
-                        }
-                    }, 1700);
+                    var stillVisible = document.querySelector("button[aria-label='Uitnodiging verzenden']");
+                    if (!stillVisible) {
+                        const nextButton = document.querySelector("#next-button");
+                        if (nextButton) nextButton.click();
+                    }
                 }
-
-
 
                 Make_Invitation_Ready();
             }

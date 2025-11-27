@@ -115,7 +115,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const url_element = choice;
                 fetchWebpageData('http://sourcingselector.nl/fetchData/' + url_element)
                     .then(data => {
-                        const storedData = JSON.parse(data.data);
+
+                        // FIXED: do NOT parse
+                        const storedData = data.data;
+
                         storeStoredData(storedData, (success, message) => {
                             if (success) {
                                 console.log('Data fetched and stored:', storedData);
@@ -135,7 +138,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ success: false, error: message });
             }
         });
-        return true; // Indicate asynchronous response
+    return true;
     }
 
     if (request.action === 'getStoredData') {
