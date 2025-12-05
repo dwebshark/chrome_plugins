@@ -1,17 +1,35 @@
-var data = "";
-var next_person_url = "";
+/* -----------------------------
+   CONFIGURATIE VOOR WACHTTIJDEN
+------------------------------*/
+const waitTimes = {
+    'navigate': { min: 2000, max: 5000 },    // Wachttijd voor navigatie (2-5 seconden)
+    'message': { min: 3000, max: 7000 },     // Wachttijd voor het versturen van een bericht (3-7 seconden)
+    'buttonClick': { min: 500, max: 1500 },  // Wachttijd voor knopklikken (500 ms - 1,5 seconde)
+    'general': { min: 1000, max: 3000 },     // Standaard wachttijd (1-3 seconden)
+};
 
 /* -----------------------------
-   VARIABLE WAIT FUNCTION
+   WACHTTIJD FUNCTIE (LOGARITMISCHE VERDELING)
 ------------------------------*/
-function variableWait(min, extra = 600) {
-    // extra = maximale random extra wachttijd
-    const randomExtra = Math.floor(Math.random() * extra);
-    return new Promise(resolve => setTimeout(resolve, min + randomExtra));
+function logWait(min, max) {
+    // Exponentieel/logaritmisch wachttijdpatroon
+    const randomFactor = Math.random() * (max - min) + min;
+    const logWait = Math.log(randomFactor + 1) * 1000; // Logaritmische schaal
+    return Math.floor(logWait);  // Zorgt ervoor dat het een integer is
+}
+
+// Functie voor wachttijd
+function variableWait(actionType = 'general') {
+    const { min, max } = waitTimes[actionType] || waitTimes['general'];
+    
+    // Genereer willekeurige logaritmische wachttijd
+    const randomWait = logWait(min, max);
+
+    return new Promise(resolve => setTimeout(resolve, randomWait));
 }
 
 /* -----------------------------
-   DATA FUNCTIONS
+   DATA FUNCTIES
 ------------------------------*/
 
 function Reload_The_Data() {
@@ -20,7 +38,7 @@ function Reload_The_Data() {
         if (response && response.success) {
             Recieve_The_Data(async () => {
                 if (data && data.openbare_url) {
-                    await variableWait(500); // min 500 ms
+                    await variableWait('navigate');  // Gebruik logaritmische wachttijd voor navigatie
                     console.log("Data ready for redirection");
                     console.log(data);
                     window.location = data.openbare_url;
@@ -92,7 +110,7 @@ function Create_Next_Button() {
                     const next_person_url = response.data;
                     console.log("New URL: ", next_person_url);
 
-                    await variableWait(500); // min 500 ms
+                    await variableWait('navigate');  // Gebruik logaritmische wachttijd voor navigatie
 
                     if (next_person_url === "No_Url") {
                         window.alert("Je hebt alle personen uitgenodigd topper!");
@@ -147,7 +165,7 @@ function Add_Eventlistener_To_Keys() {
                 var inviteButton = document.querySelector("button[aria-label='Uitnodiging verzenden']");
                 if (inviteButton) inviteButton.click();
 
-                await variableWait(1700); // min 1700 ms
+                await variableWait('message'); // Gebruik logaritmische wachttijd voor berichten
 
                 inviteButton = document.querySelector("button[aria-label='Uitnodiging verzenden']");
                 if (!inviteButton) {
@@ -202,7 +220,7 @@ function handleChoice(choice) {
                 if (response && response.success) {
                     const next_person_url = response.data;
 
-                    await variableWait(500); // min 500 ms
+                    await variableWait('navigate');  // Gebruik logaritmische wachttijd voor navigatie
 
                     if (next_person_url == "No_Url") {
                         window.location = "https://www.linkedin.com";
@@ -319,7 +337,7 @@ chrome.storage.local.get(['extensionEnabled'], function (result) {
                 }
 
                 async function Make_Invitation_Ready() {
-                    await variableWait(2500); // min 2500 ms
+                    await variableWait('message'); // Logaritmische wachttijd voor berichten
 
                     var bericht_verstuur_vlak = document.getElementsByClassName("ph5")[0];
                     var invite_button = bericht_verstuur_vlak.querySelectorAll('[aria-label*="Connectieverzoek verzenden"]');
@@ -342,7 +360,7 @@ chrome.storage.local.get(['extensionEnabled'], function (result) {
                     var inviteButton = await waitForElement("button[aria-label='Uitnodiging verzenden']");
                     inviteButton.click();
 
-                    await variableWait(1700); // min 1700 ms
+                    await variableWait('buttonClick'); // Logaritmische wachttijd voor knopklikken
 
                     var stillVisible = document.querySelector("button[aria-label='Uitnodiging verzenden']");
                     if (!stillVisible) {
